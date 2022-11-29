@@ -11,6 +11,9 @@ bool VALID_FIX_ONLY_WITH_HEADING = false;
 bool ENABLE_SERIAL_DEBUGGING     = true;
 
 struct GpsFormat {  
+  String DateTime;
+  String COG;
+  String SOG;
   String Latitude;
   String Longitude;
 };
@@ -96,24 +99,6 @@ void setup() {
   Display.display();
 }
 
-void drawGPSscreen(GpsFormat GPSformat) {    
-  Display.clear();  
-  
-  if (ENABLE_SERIAL_DEBUGGING) { Display.setPixel(millis() % 128, 1); }  
-  
-  Display.setTextAlignment(TEXT_ALIGN_LEFT);
-  Display.setFont(Monospaced_plain_10);  
-
-  //position
-  Display.drawHorizontalLine(0, 35, 128);    
-  Display.drawString(0, 40, "lat: " + GPSformat.Latitude);  
-  Display.drawCircle(52, 45, 2);  
-  Display.drawString(0, 50, "lng: " + GPSformat.Longitude);  
-  Display.drawCircle(52, 55, 2);
-  
-  Display.display();
-}
-
 void GPSdebug(gps_fix &GPSfix) {
   if (!ENABLE_SERIAL_DEBUGGING) { return; }
 
@@ -146,19 +131,36 @@ void GPSdebug(gps_fix &GPSfix) {
 }
 
 void logToSDcard(String fileName, LinkedList<gps_fix*> &positions) {
-  File file = SD.open(fileName, FILE_WRITE);
-  Serial.println(fileName);
-
+  File file = SD.open(fileName, FILE_WRITE);    
+  
   if (!file) { 
+    DEBUG("cannot open file");
     positions.clear();  
     return; 
   }
 
-  for (int i = 0; i < positions.size(); ++i) {
+  DEBUG(fileName);
+
+  int numberOfPositions = positions.size();
+
+  for (int i = 0; i < numberOfPositions; ++i) {
     gps_fix* current = positions.get(i);
-    file.printf("%f,%f\n", current->latitude(), current->longitude());
-    Serial.print(".");
-  }
+
+    file.printf(
+      "%f,%f,%f,%f,%d-%d-%d,%d:%d:%d\n",
+      current->latitude(),
+      current->longitude(),
+      current->speed(),
+      current->heading(),      
+      current->dateTime.year,
+      current->dateTime.month,
+      current->dateTime.date,
+      current->dateTime.hours,
+      current->dateTime.minutes,
+      current->dateTime.seconds);
+	}
+
+  DEBUG(String("written " + String(numberOfPositions) + " files to SD"));
 
   Serial.println();
       
@@ -166,10 +168,66 @@ void logToSDcard(String fileName, LinkedList<gps_fix*> &positions) {
   positions.clear();  
 }
 
-GpsFormat formatFix(gps_fix &GPSfix) {  
+void drawGPSscreen(GpsFormat GPSformat) {    
+  Display.clear();  
+  
+  if (ENABLE_SERIAL_DEBUGGING) { Display.setPixel(millis() % 128, 1); }  
+  
+  Display.setTextAlignment(TEXT_ALIGN_LEFT);
+  Display.setFont(Monospaced_plain_10);  
+
+  //date time
+  Display.drawString(0, 0,  "UTC: " + GPSformat.DateTime);
+
+  //instruments
+  Display.drawHorizontalLine(0, 15, 128);    
+  Display.drawString(0, 20,  "COG: " + GPSformat.COG); Display.drawCircle(52, 25, 2);
+  Display.drawString(60, 20, "SOG: " + GPSformat.SOG);  
+  Display.drawVerticalLine(57, 15, 20);
+
+  //position
+  Display.drawHorizontalLine(0, 35, 128);    
+  Display.drawString(0, 40, "lat: " + GPSformat.Latitude); Display.drawCircle(52, 45, 2);  
+  Display.drawString(0, 50, "lng: " + GPSformat.Longitude);  
+  Display.drawCircle(52, 55, 2);
+  
+  Display.display();
+}
+
+GpsFormat formatFix(gps_fix &GPSfix) {
+  String dateTime = "00:00 00-00-0000";
+  String cog = "--- ";  
+  String sog = "--.- KT";
   String latString = " --  --.--' -";
   String lngString = "---  --.--' -"; 
   
+  if (GPSfix.valid.date && GPSfix.valid.time) {
+    char timeBuff[40];
+    sprintf(timeBuff, "%02d:%02d %02d-%02d-20%02d",
+      GPSfix.dateTime.hours,
+      GPSfix.dateTime.minutes,      
+      GPSfix.dateTime.date,
+      GPSfix.dateTime.month,
+      GPSfix.dateTime.year
+    );
+    dateTime = timeBuff;
+  }
+
+  if (GPSfix.valid.speed) {
+    char cogBuff[40];
+    float speedFloat = GPSfix.speed();
+    int speed = (int)speedFloat;
+    int speedDec = (int) ((speedFloat - speed) * 10);
+    sprintf(cogBuff, "%02d.%dKT", speed, speedDec);
+    sog = cogBuff;
+  }
+
+  if (GPSfix.valid.heading) {
+    char headingBuff[40];        
+    sprintf(headingBuff, "%03d", (int)GPSfix.heading());
+    cog = headingBuff;
+  }
+
   if (GPSfix.valid.location) {
     char latitudeBuff[40];
     char longitudeBuff[40];  
@@ -202,7 +260,10 @@ GpsFormat formatFix(gps_fix &GPSfix) {
     lngString = longitudeBuff;    
   }
 
-  GpsFormat result = {    
+  GpsFormat result = {   
+    dateTime,
+    cog,
+    sog, 
     latString,
     lngString    
   };
@@ -217,6 +278,7 @@ bool isValidFix(gps_fix &GPSfix) {
 
   return GPSfix.valid.location &&
          GPSfix.valid.date &&
+         GPSfix.valid.time &&
          validHeadingAndSpeed;
 }
 
