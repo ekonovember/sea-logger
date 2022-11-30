@@ -18,6 +18,38 @@ struct GpsFormat {
   String Longitude;
 };
 
+class MotionStateMonitor {
+  unsigned long ValidHeadingRequiredPeriod = 10 * 1000;
+  bool InMovingState = false;
+  unsigned long FirstValidHeading = 0;
+
+  public:
+    MotionStateMonitor() {}
+
+    void LogHeadingStatus(bool headingStatus) {
+      unsigned long currentMillis = millis();
+
+      if (headingStatus && !InMovingState) {
+        if (FirstValidHeading == 0) {
+          FirstValidHeading = currentMillis;
+        }        
+
+        if ((currentMillis - FirstValidHeading) > ValidHeadingRequiredPeriod) {
+          InMovingState = true;
+        }
+      }
+
+      if (!headingStatus && InMovingState) {
+        InMovingState = false;
+        FirstValidHeading = 0;
+      }
+    }
+
+    bool IsInMovingState() {
+      return InMovingState;
+    }
+};
+
 class Timings {
   const unsigned long DisplayInterval    =  2 * 1000;
   const unsigned long LoggingInterval    =  5 * 1000;
@@ -75,7 +107,8 @@ SH1106Wire Display(0x3c, SDA, SCL);
 NMEAGPS GPS;
 SoftwareSerial SerialGPS(D3, D4);
 Timings ActionTimings = Timings();
-LinkedList<gps_fix*> GPSDataList = LinkedList<gps_fix*>();
+LinkedList<gps_fix> GPSDataList = LinkedList<gps_fix>();
+MotionStateMonitor MotionMonitor = MotionStateMonitor();
 
 void setup() {
   if (ENABLE_SERIAL_DEBUGGING) {
@@ -130,7 +163,11 @@ void GPSdebug(gps_fix &GPSfix) {
 	}
 }
 
-void logToSDcard(String fileName, LinkedList<gps_fix*> &positions) {
+void logToSDcard(String fileName, LinkedList<gps_fix> &positions) {
+  int numberOfPositions = positions.size();
+
+  if (numberOfPositions == 0) { return; }
+
   File file = SD.open(fileName, FILE_WRITE);    
   
   if (!file) { 
@@ -139,25 +176,23 @@ void logToSDcard(String fileName, LinkedList<gps_fix*> &positions) {
     return; 
   }
 
-  DEBUG(fileName);
-
-  int numberOfPositions = positions.size();
+  DEBUG(fileName);  
 
   for (int i = 0; i < numberOfPositions; ++i) {
-    gps_fix* current = positions.get(i);
+    gps_fix current = positions.get(i);
 
     file.printf(
-      "%f,%f,%f,%f,%d-%d-%d,%d:%d:%d\n",
-      current->latitude(),
-      current->longitude(),
-      current->speed(),
-      current->heading(),      
-      current->dateTime.year,
-      current->dateTime.month,
-      current->dateTime.date,
-      current->dateTime.hours,
-      current->dateTime.minutes,
-      current->dateTime.seconds);
+      "%f,%f,%f,%f,%02d-%02d-%04d,%02d:%02d:%02d\n",
+      current.latitude(),
+      current.longitude(),
+      current.speed(),
+      current.heading(),            
+      current.dateTime.date,      
+      current.dateTime.month,
+      current.dateTime.full_year(),
+      current.dateTime.hours,
+      current.dateTime.minutes,
+      current.dateTime.seconds);
 	}
 
   DEBUG(String("written " + String(numberOfPositions) + " files to SD"));
@@ -168,10 +203,8 @@ void logToSDcard(String fileName, LinkedList<gps_fix*> &positions) {
   positions.clear();  
 }
 
-void drawGPSscreen(GpsFormat GPSformat) {    
-  Display.clear();  
-  
-  if (ENABLE_SERIAL_DEBUGGING) { Display.setPixel(millis() % 128, 1); }  
+void drawGPSscreen(GpsFormat GPSformat, bool inMovingState) {    
+  Display.clear();    
   
   Display.setTextAlignment(TEXT_ALIGN_LEFT);
   Display.setFont(Monospaced_plain_10);  
@@ -191,13 +224,20 @@ void drawGPSscreen(GpsFormat GPSformat) {
   Display.drawString(0, 50, "lng: " + GPSformat.Longitude);  
   Display.drawCircle(52, 55, 2);
   
+  //moving state
+  if (inMovingState) {
+    Display.drawCircle(119, 51, 1);
+    Display.drawCircle(119, 51, 3);    
+    Display.drawCircle(119, 51, 5);
+  }  
+
   Display.display();
 }
 
 GpsFormat formatFix(gps_fix &GPSfix) {
-  String dateTime = "00:00 00-00-0000";
+  String dateTime = "--:-- XX-XX-XXXX";
   String cog = "--- ";  
-  String sog = "--.- KT";
+  String sog = "--.-KT";
   String latString = " --  --.--' -";
   String lngString = "---  --.--' -"; 
   
@@ -271,9 +311,9 @@ GpsFormat formatFix(gps_fix &GPSfix) {
   return result;
 }
 
-bool isValidFix(gps_fix &GPSfix) {
-  bool validHeadingAndSpeed = !VALID_FIX_ONLY_WITH_HEADING || (
-    GPSfix.valid.heading && GPSfix.valid.speed
+bool isValidFix(bool validFixOnlyWithHeading, gps_fix &GPSfix, MotionStateMonitor motionMonitor) {
+  bool validHeadingAndSpeed = !validFixOnlyWithHeading || (
+    motionMonitor.IsInMovingState()
   );
 
   return GPSfix.valid.location &&
@@ -291,16 +331,17 @@ String formatFileName(gps_fix &GPSfix) {
 void GPSloop() {
 	while (GPS.available(SerialGPS)) {		
     gps_fix GPSfix = GPS.read();
+    MotionMonitor.LogHeadingStatus(GPSfix.valid.heading && GPSfix.valid.speed);
     
     if (ActionTimings.ShouldDisplay()) {      
       DEBUG("printing to display");
       GpsFormat GPSformat = formatFix(GPSfix);      
-      drawGPSscreen(GPSformat);		      
+      drawGPSscreen(GPSformat, MotionMonitor.IsInMovingState());		      
     }    
         
-    if (ActionTimings.ShouldLog() && isValidFix(GPSfix)) {
+    if (ActionTimings.ShouldLog() && isValidFix(VALID_FIX_ONLY_WITH_HEADING, GPSfix, MotionMonitor)) {
       DEBUG("logging to memory");
-      GPSDataList.add(&GPSfix);
+      GPSDataList.add(GPSfix);
 
       if (ActionTimings.ShouldUpdateCard()) {        
         DEBUG("logging SD card");
