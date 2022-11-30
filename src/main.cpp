@@ -9,6 +9,7 @@
 
 bool VALID_FIX_ONLY_WITH_HEADING = false;
 bool ENABLE_SERIAL_DEBUGGING     = true;
+int BUTTON_PIN = D0;
 
 struct GpsFormat {  
   String DateTime;
@@ -16,6 +17,38 @@ struct GpsFormat {
   String SOG;
   String Latitude;
   String Longitude;
+};
+
+void DEBUG(String message) {
+  if (!ENABLE_SERIAL_DEBUGGING) { return; }
+
+  Serial.println(message);	
+}
+
+class DisplayStateMonitor {
+  bool DisplayOn = true;
+  unsigned long MinimumSwitchStatePeriod = 500;
+  unsigned long LastStateChange = 0;
+
+  public:
+    DisplayStateMonitor() { }
+
+    void SetState(bool change, SH1106Wire &display) {
+      unsigned long currentMillis = millis();
+      bool allowedToChange = ((currentMillis - LastStateChange) > MinimumSwitchStatePeriod);
+
+      if (!change || !allowedToChange) { return; }
+
+      DisplayOn = !DisplayOn;
+
+      if (DisplayOn) {
+        display.displayOn();        
+      } else {
+        display.displayOff();        
+      }
+
+      LastStateChange = currentMillis;      
+    }
 };
 
 class MotionStateMonitor {
@@ -97,18 +130,13 @@ public:
   }  
 };
 
-void DEBUG(String message) {
-  if (!ENABLE_SERIAL_DEBUGGING) { return; }
-
-  Serial.println(message);	
-}
-
 SH1106Wire Display(0x3c, SDA, SCL);
 NMEAGPS GPS;
 SoftwareSerial SerialGPS(D3, D4);
 Timings ActionTimings = Timings();
 LinkedList<gps_fix> GPSDataList = LinkedList<gps_fix>();
 MotionStateMonitor MotionMonitor = MotionStateMonitor();
+DisplayStateMonitor DisplayMonitor = DisplayStateMonitor();
 
 void setup() {
   if (ENABLE_SERIAL_DEBUGGING) {
@@ -130,6 +158,8 @@ void setup() {
   Display.flipScreenVertically();  
   Display.clear();  
   Display.display();
+
+  pinMode(BUTTON_PIN, INPUT_PULLDOWN_16);
 }
 
 void GPSdebug(gps_fix &GPSfix) {
@@ -329,16 +359,24 @@ String formatFileName(gps_fix &GPSfix) {
 }
 
 void GPSloop() {
-	while (GPS.available(SerialGPS)) {		
+  DisplayMonitor.SetState(digitalRead(BUTTON_PIN), Display);
+
+	while (GPS.available(SerialGPS)) {		    
+    DisplayMonitor.SetState(digitalRead(BUTTON_PIN), Display);    
+
     gps_fix GPSfix = GPS.read();
     MotionMonitor.LogHeadingStatus(GPSfix.valid.heading && GPSfix.valid.speed);
     
+    DisplayMonitor.SetState(digitalRead(BUTTON_PIN), Display);
+
     if (ActionTimings.ShouldDisplay()) {      
       DEBUG("printing to display");
       GpsFormat GPSformat = formatFix(GPSfix);      
       drawGPSscreen(GPSformat, MotionMonitor.IsInMovingState());		      
     }    
-        
+
+    DisplayMonitor.SetState(digitalRead(BUTTON_PIN), Display);
+
     if (ActionTimings.ShouldLog() && isValidFix(VALID_FIX_ONLY_WITH_HEADING, GPSfix, MotionMonitor)) {
       DEBUG("logging to memory");
       GPSDataList.add(GPSfix);
@@ -349,7 +387,9 @@ void GPSloop() {
       }
     }
       
-    GPSdebug(GPSfix);		        
+    DisplayMonitor.SetState(digitalRead(BUTTON_PIN), Display);
+
+    GPSdebug(GPSfix);		            
 	}      
 }
 
