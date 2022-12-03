@@ -2,7 +2,6 @@
 #include <NMEAGPS.h>
 #include <Wire.h>
 #include <SH1106Wire.h>
-#include <math.h>
 #include <SPI.h>
 #include <SD.h>
 #include <LinkedList.h>
@@ -226,8 +225,6 @@ void logToSDcard(String fileName, LinkedList<gps_fix> &positions) {
 	}
 
   DEBUG(String("written " + String(numberOfPositions) + " files to SD"));
-
-  Serial.println();
       
   file.close();
   positions.clear();  
@@ -353,9 +350,15 @@ bool isValidFix(bool validFixOnlyWithHeading, gps_fix &GPSfix, MotionStateMonito
 }
 
 String formatFileName(gps_fix &GPSfix) {
-  return String(GPSfix.dateTime.full_year()) + "-" 
-       + String(GPSfix.dateTime.month) + "-"
-       + String(GPSfix.dateTime.date) + ".csv";
+  char timeBuff[40];
+  
+  sprintf(timeBuff, "%04d-%02d-%02d.csv",         
+    GPSfix.dateTime.full_year(),
+    GPSfix.dateTime.month, 
+    GPSfix.dateTime.date
+  );
+
+  return String(timeBuff);
 }
 
 void GPSloop() {

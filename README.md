@@ -121,6 +121,8 @@ If you happen to have SSD1306 display driver you will have to change the import 
 //source file: src/main.cpp
 #include <SH1106Wire.h> // look up the library and change accordingly
 ```
+#### Monospace font
+It is much easier to make the display aligned when you are using monospace font. This project uses *Monospaced_plain_10*. This one is not available by default so it's been included in */fonts/Monospaced_plain_10.txt*, you need to add this one to: *.pio\libdeps\nodemcuv2\ESP8266 and ESP32 OLED driver for SSD1306 displays\src\OLEDDisplayFonts.h*
 
 ## Debugging
 By leaving *ENABLE_SERIAL_DEBUGGING* set to true it is possible to observe debug data via serial monitor (baud rate 9600).
