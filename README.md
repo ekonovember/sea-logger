@@ -94,7 +94,7 @@ Some GPS settings need to be changed directly in files installed from dependenci
 #define NMEAGPS_PARSE_GLL
 #define NMEAGPS_PARSE_GSA
 #define NMEAGPS_PARSE_GSV
-//#define NMEAGPS_PARSE_GST
+#define NMEAGPS_PARSE_GST
 #define NMEAGPS_PARSE_RMC
 #define NMEAGPS_PARSE_VTG
 #define NMEAGPS_PARSE_ZDA
@@ -106,6 +106,28 @@ Some GPS settings need to be changed directly in files installed from dependenci
 //#define LAST_SENTENCE_IN_INTERVAL NMEAGPS::NMEA_RMC
 ```
 
+```c++
+//in file GPSfix_cfg.h uncomment
+#define GPS_FIX_DATE
+#define GPS_FIX_TIME
+#define GPS_FIX_LOCATION
+//#define GPS_FIX_LOCATION_DMS
+#define GPS_FIX_ALTITUDE
+#define GPS_FIX_SPEED
+//#define GPS_FIX_VELNED
+#define GPS_FIX_HEADING
+#define GPS_FIX_SATELLITES
+//#define GPS_FIX_HDOP
+//#define GPS_FIX_VDOP
+//#define GPS_FIX_PDOP
+#define GPS_FIX_LAT_ERR
+#define GPS_FIX_LON_ERR
+//#define GPS_FIX_ALT_ERR
+//#define GPS_FIX_SPD_ERR
+#define GPS_FIX_HDG_ERR
+//#define GPS_FIX_TIME_ERR
+//#define GPS_FIX_GEOID_HEIGHT
+```
 ### Settings in code
 For "production" mode - if you want logger to work only when there is movement.
 
@@ -123,6 +145,8 @@ If you happen to have SSD1306 display driver you will have to change the import 
 ```
 #### Monospace font
 It is much easier to make the display aligned when you are using monospace font. This project uses *Monospaced_plain_10*. This one is not available by default so it's been included in */fonts/Monospaced_plain_10.txt*, you need to add this one to: *.pio\libdeps\nodemcuv2\ESP8266 and ESP32 OLED driver for SSD1306 displays\src\OLEDDisplayFonts.h*
+
+You can generate/convert your own font fot the display on [this](http://oleddisplay.squix.ch/#/home) website
 
 ## Debugging
 By leaving *ENABLE_SERIAL_DEBUGGING* set to true it is possible to observe debug data via serial monitor (baud rate 9600).

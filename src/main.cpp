@@ -163,6 +163,15 @@ void setup() {
 
 void GPSdebug(gps_fix &GPSfix) {
   if (!ENABLE_SERIAL_DEBUGGING) { return; }
+    
+  if (GPSfix.valid.lat_err && GPSfix.valid.lon_err) {  
+      Serial.printf("latitude error: %f\n", GPSfix.lat_err());      
+      Serial.printf("longitude error: %f\n", GPSfix.lon_err());    
+  }
+  
+  if (GPSfix.valid.hdg_err) {  
+      Serial.printf("heading error: %f\n", GPSfix.hdg_err());
+  }
 
   if (GPSfix.valid.location) {
 		Serial.println("location float");	
@@ -364,7 +373,8 @@ String formatFileName(gps_fix &GPSfix) {
 void GPSloop() {
   DisplayMonitor.SetState(digitalRead(BUTTON_PIN), Display);
 
-	while (GPS.available(SerialGPS)) {		    
+	while (GPS.available(SerialGPS)) {
+    GPS.send_P(&SerialGPS, F("PUBX,40,GST,0,1,0,0,0,0"));		    
     DisplayMonitor.SetState(digitalRead(BUTTON_PIN), Display);    
 
     gps_fix GPSfix = GPS.read();
