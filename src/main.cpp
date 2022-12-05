@@ -9,6 +9,7 @@
 bool VALID_FIX_ONLY_WITH_HEADING = false;
 bool ENABLE_SERIAL_DEBUGGING     = true;
 int BUTTON_PIN = D0;
+float POSITION_ACCURACY_THRESHOLD = 7.0;
 
 struct GpsFormat {  
   String DateTime;
@@ -16,6 +17,7 @@ struct GpsFormat {
   String SOG;
   String Latitude;
   String Longitude;
+  String Accuracy;
 };
 
 void DEBUG(String message) {
@@ -265,7 +267,10 @@ void drawGPSscreen(GpsFormat GPSformat, bool inMovingState) {
     Display.drawCircle(119, 51, 1);
     Display.drawCircle(119, 51, 3);    
     Display.drawCircle(119, 51, 5);
-  }  
+  } else {    
+    Display.drawString(113, 45, GPSformat.Accuracy);
+    Display.drawCircle(119, 51, 8);
+  } 
 
   Display.display();
 }
@@ -276,15 +281,26 @@ GpsFormat formatFix(gps_fix &GPSfix) {
   String sog = "--.-KT";
   String latString = " --  --.--' -";
   String lngString = "---  --.--' -"; 
-  
+  String accuracy = "XX";
+
+  if (GPSfix.valid.lat_err && GPSfix.valid.lon_err) {
+    char avgBuf[40];
+    int avg = (int)(GPSfix.lat_err() + GPSfix.lon_err()) / 2.0;
+
+    if (avg < 100) {
+      sprintf(avgBuf, "%02d", avg);
+      accuracy = avgBuf;
+    }        
+  }
+
   if (GPSfix.valid.date && GPSfix.valid.time) {
     char timeBuff[40];
-    sprintf(timeBuff, "%02d:%02d %02d-%02d-20%02d",
+    sprintf(timeBuff, "%02d:%02d %02d-%02d-%04d",
       GPSfix.dateTime.hours,
       GPSfix.dateTime.minutes,      
       GPSfix.dateTime.date,
       GPSfix.dateTime.month,
-      GPSfix.dateTime.year
+      GPSfix.dateTime.full_year()
     );
     dateTime = timeBuff;
   }
@@ -341,20 +357,22 @@ GpsFormat formatFix(gps_fix &GPSfix) {
     cog,
     sog, 
     latString,
-    lngString    
+    lngString,
+    accuracy    
   };
 
   return result;
 }
 
-bool isValidFix(bool validFixOnlyWithHeading, gps_fix &GPSfix, MotionStateMonitor motionMonitor) {
-  bool validHeadingAndSpeed = !validFixOnlyWithHeading || (
-    motionMonitor.IsInMovingState()
-  );
+bool isValidFix(bool validFixOnlyWithHeading, float accuracyThreshold, gps_fix &GPSfix, MotionStateMonitor motionMonitor) {
+  bool validHeadingAndSpeed = !validFixOnlyWithHeading || motionMonitor.IsInMovingState();
 
   return GPSfix.valid.location &&
          GPSfix.valid.date &&
          GPSfix.valid.time &&
+         GPSfix.valid.lat_err &&
+         GPSfix.valid.lon_err &&
+         ((GPSfix.lat_err() + GPSfix.lon_err()) / 2) <= accuracyThreshold &&          
          validHeadingAndSpeed;
 }
 
@@ -390,7 +408,13 @@ void GPSloop() {
 
     DisplayMonitor.SetState(digitalRead(BUTTON_PIN), Display);
 
-    if (ActionTimings.ShouldLog() && isValidFix(VALID_FIX_ONLY_WITH_HEADING, GPSfix, MotionMonitor)) {
+    bool isValidForLogging = isValidFix(
+      VALID_FIX_ONLY_WITH_HEADING,
+      POSITION_ACCURACY_THRESHOLD,
+      GPSfix,
+      MotionMonitor);
+
+    if (ActionTimings.ShouldLog() && isValidForLogging) {
       DEBUG("logging to memory");
       GPSDataList.add(GPSfix);
 
