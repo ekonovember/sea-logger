@@ -3,16 +3,16 @@
 Yet another GPS tracker based on arduino/nodemcu platform. The main reason for publishing this project is to provide a complete, step by step, no doubts/investigation process for building and programing a complete and fully functional GPS tracker for ~~everyone~~ ...well mostly sailors.
 
 ### How it works
-After connecting to power supply tracker will immediately display received data (placeholders for missing data). You should be able to see:
+After connecting to power supply tracker will immediately display received data (or placeholders for missing data). You should be able to see:
 * UTC - time and date (in UTC)
-* COG - course over ground (i degrees)
-* SOG - speed over ground (in KT)
+* COG - course over ground (degrees)
+* SOG - speed over ground (knots)
 * lat - latitude dd° mm.mm' N/S
 * lng - longitude ddd° mm.mm' E/W
 
 depending on what is currently available there will be real data or placeholders. Display can be turned on and off with use of the button - this is very important to keep the display off when not used to increase batery live.
 
-When movement is detected and happens continuously for at least 10s the additional indicator will be displayed on the right hand side of lat/lng (3 cocentric circles). This indicator states that the data will actually be logged into SD card.
+Average accuracy of the position in meters is displayed in the right hand side bottom corner of the screen (surrounded with a circle). When accuracy is better than 7m and there is movement that lasts for at least 10seconds continuously this indicator will be changed to 3 cocentric circles and will state that data will actually be logged into SD card.
 
 Loggin interval is 5s - data logged is latitude, longitude, time, date, speed and heading. Time interval assures that log file (csv) does not exceed 4MB (FAT32 limitation) even if logging happens all the time for 24h. File naming convention will switch to new file for each day - file format name is dd-mm-yyy.csv.
 
@@ -31,6 +31,7 @@ This project has been created using *PlatformIO* and *VS Code*. Dependencies (li
 | plerup/EspSoftwareSerial@^6.16.1                                      |  
 | slashdevin/NeoGPS@^4.2.9                                              |
 | ivanseidel/LinkedList@0.0.0-alpha+sha.dac3874d28                      |
+note that this is just for reference, all dependencies should be automatically restored on build.
 
 ### Components
 * NodemCU v3 board (ESP8266 controller),
@@ -137,7 +138,7 @@ bool VALID_FIX_ONLY_WITH_HEADING = true;
 bool ENABLE_SERIAL_DEBUGGING     = false;
 ```
 
-If you happen to have SSD1306 display driver you will have to change the import accordingly
+If you happen to have SSD1306 display driver you will have to change this import accordingly.
 
 ```c++
 //source file: src/main.cpp
@@ -146,7 +147,7 @@ If you happen to have SSD1306 display driver you will have to change the import 
 #### Monospace font
 It is much easier to make the display aligned when you are using monospace font. This project uses *Monospaced_plain_10*. This one is not available by default so it's been included in */fonts/Monospaced_plain_10.txt*, you need to add this one to: *.pio\libdeps\nodemcuv2\ESP8266 and ESP32 OLED driver for SSD1306 displays\src\OLEDDisplayFonts.h*
 
-You can generate/convert your own font fot the display on [this](http://oleddisplay.squix.ch/#/home) website
+You can generate/convert your own font fot the display on [this](http://oleddisplay.squix.ch/#/home) website.
 
 ## Debugging
 By leaving *ENABLE_SERIAL_DEBUGGING* set to true it is possible to observe debug data via serial monitor (baud rate 9600).
@@ -155,3 +156,14 @@ By leaving *ENABLE_SERIAL_DEBUGGING* set to true it is possible to observe debug
 //source file: src/main.cpp
 bool ENABLE_SERIAL_DEBUGGING     = true;
 ```
+
+if you decide to leave:
+```c++
+bool VALID_FIX_ONLY_WITH_HEADING = true;
+```
+
+this will store positions to SD card without the requirement for movement, the data will be stored when:
+- valid fix
+- valid position
+- valid date and time
+- mean accuracy better than 7m
