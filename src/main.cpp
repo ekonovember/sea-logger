@@ -6,10 +6,10 @@
 #include <SD.h>
 #include <LinkedList.h>
 
-bool VALID_FIX_ONLY_WITH_HEADING = false;
-bool ENABLE_SERIAL_DEBUGGING     = true;
+bool VALID_FIX_ONLY_WITH_HEADING = true;
+bool ENABLE_SERIAL_DEBUGGING     = false;
 int BUTTON_PIN = D0;
-float POSITION_ACCURACY_THRESHOLD = 7.0;
+float POSITION_ACCURACY_THRESHOLD = 15.0;
 
 struct GpsFormat {  
   String DateTime;
