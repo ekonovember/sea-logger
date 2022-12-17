@@ -53,9 +53,13 @@ class DisplayStateMonitor {
 };
 
 class MotionStateMonitor {
-  unsigned long ValidHeadingRequiredPeriod = 10 * 1000;
   bool InMovingState = false;
+
+  unsigned long ValidHeadingRequiredPeriod = 6 * 1000;  
   unsigned long FirstValidHeading = 0;
+
+  unsigned long InvalidHeadingRequiredPeriod = 3 * 1000;  
+  unsigned long FirstInvalidHeading = 0;
 
   public:
     MotionStateMonitor() {}
@@ -70,12 +74,19 @@ class MotionStateMonitor {
 
         if ((currentMillis - FirstValidHeading) > ValidHeadingRequiredPeriod) {
           InMovingState = true;
+          FirstInvalidHeading = 0;
         }
       }
 
       if (!headingStatus && InMovingState) {
-        InMovingState = false;
-        FirstValidHeading = 0;
+        if (FirstInvalidHeading == 0) {
+          FirstInvalidHeading = currentMillis;
+        }
+
+        if ((currentMillis - FirstInvalidHeading) > InvalidHeadingRequiredPeriod) {
+          InMovingState = false;
+          FirstValidHeading = 0;
+        }
       }
     }
 
@@ -86,7 +97,7 @@ class MotionStateMonitor {
 
 class Timings {
   const unsigned long DisplayInterval    =  2 * 1000;
-  const unsigned long LoggingInterval    =  5 * 1000;
+  const unsigned long LoggingInterval    =  3 * 1000;
   const unsigned long CardUpdateInterval = 60 * 1000;
 
   unsigned long LastDisplay = 0;
@@ -342,8 +353,11 @@ GpsFormat formatFix(gps_fix &GPSfix) {
     int latMinutes = (int)latMinutesFloat;
     int lngMinutes = (int)lngMinutesFloat;        
 
-    int latMinutesDecimal =  (int)ceill((latMinutesFloat - latMinutes) * 100);
-    int lngMinutesDecimal =  (int)ceill((lngMinutesFloat - lngMinutes) * 100);    
+    int latMinutesDecimal =  (int)ceil((latMinutesFloat - latMinutes) * 100);
+    int lngMinutesDecimal =  (int)ceil((lngMinutesFloat - lngMinutes) * 100);    
+
+    latMinutesDecimal = latMinutesDecimal >= 100 ? 99 : latMinutesDecimal;
+    lngMinutesDecimal = lngMinutesDecimal >= 100 ? 99 : lngMinutesDecimal;
 
     sprintf(latitudeBuff, " %02d  %02d.%02d' %c", latDegrees, latMinutes, latMinutesDecimal, latHem);
     sprintf(longitudeBuff, "%03d  %02d.%02d' %c", lngDegrees, lngMinutes, lngMinutesDecimal, lngHem);
