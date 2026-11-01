@@ -1,3 +1,9 @@
+#pragma once
+// Monospaced 6x13 font (generated with http://oleddisplay.squix.ch).
+// Monospace keeps the instrument columns aligned on the 128x64 OLED.
+
+#include <Arduino.h>
+
 const uint8_t Monospaced_plain_10[] PROGMEM = {
 	0x06, // Width: 6
 	0x0D, // Height: 13
