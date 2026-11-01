@@ -154,6 +154,13 @@ python tools/csv_to_gpx.py 2026-11-01.csv 2026-11-02.csv -o leg1.gpx --name "Leg
 
 Both run in GitHub Actions together with the firmware build.
 
+## Working with an AI agent
+
+The repository is set up for [Claude Code](https://claude.com/claude-code):
+[`CLAUDE.md`](CLAUDE.md) holds the architecture rules (no Arduino headers in the core,
+time injected, no heap in the loop), commands and hardware notes, and `.claude/` adds
+scoped permissions (flashing always asks) and `/test`, `/flash` and `/gpx` commands.
+
 ## How I would build it today
 
 The 2022 constraints were "parts from the drawer, no app, no subscription". With the

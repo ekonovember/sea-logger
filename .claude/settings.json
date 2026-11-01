@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "Bash(pio test:*)",
+      "Bash(pio run:*)",
+      "Bash(python -m unittest:*)",
+      "Bash(python tools/csv_to_gpx.py:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ],
+    "ask": [
+      "Bash(pio run -e nodemcuv2 -t upload:*)"
+    ]
+  }
+}
