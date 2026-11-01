@@ -1,2 +1,5 @@
-.pio
-.vscode
+.pio/
+.vscode/
+__pycache__/
+*.gpx
+*.geojson
