@@ -19,12 +19,11 @@ DegreesMinutes toDegreesMinutes(double decimalDegrees, bool isLatitude) {
         result.hemisphere = decimalDegrees < 0 ? 'W' : 'E';
     }
 
-    const double absolute = std::fabs(decimalDegrees);
-    result.degrees = static_cast<uint16_t>(absolute);
-    const double minutes = (absolute - result.degrees) * 60.0;
-    result.minutes = static_cast<uint8_t>(minutes);
-    long hundredths = static_cast<long>(std::ceil((minutes - result.minutes) * 100.0));
-    result.hundredths = static_cast<uint8_t>(hundredths >= 100 ? 99 : hundredths);
+    // Work in whole hundredths of a minute so rounding carries correctly.
+    const long total = std::lround(std::fabs(decimalDegrees) * 60.0 * 100.0);
+    result.degrees = static_cast<uint16_t>(total / 6000);
+    result.minutes = static_cast<uint8_t>((total / 100) % 60);
+    result.hundredths = static_cast<uint8_t>(total % 100);
     return result;
 }
 

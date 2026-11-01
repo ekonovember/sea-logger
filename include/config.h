@@ -32,6 +32,7 @@ constexpr uint32_t kMotionStopMs = 3000;
 constexpr uint32_t kDisplayRefreshMs = 2000;
 constexpr uint32_t kLogIntervalMs = 3000;      // one track point every 3 s
 constexpr uint32_t kSdFlushIntervalMs = 60000; // write the buffer once a minute
+constexpr uint32_t kGstRequestIntervalMs = 30000;
 constexpr uint32_t kButtonSettleMs = 30;
 
 // RAM buffer between SD writes. A minute at one point per 3 s is 20 points;

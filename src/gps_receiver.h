@@ -31,4 +31,6 @@ private:
 
     SoftwareSerial serial_;
     NMEAGPS parser_;
+    uint32_t lastGstRequestMs_ = 0;
+    bool gstRequested_ = false;
 };

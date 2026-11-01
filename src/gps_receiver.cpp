@@ -10,17 +10,22 @@ void GpsReceiver::begin(uint32_t baud) {
 }
 
 // The NEO-6M does not emit GST (pseudorange error statistics) by default.
-// PUBX,40 turns it on at 1 per fix.
+// PUBX,40 turns it on at 1 per fix. The setting lives in the receiver's RAM,
+// so it is re-sent periodically in case the module browns out and restarts.
 void GpsReceiver::requestErrorEstimates() {
     parser_.send_P(&serial_, F("PUBX,40,GST,0,1,0,0,0,0"));
 }
 
-bool GpsReceiver::poll(GpsReading& out, uint32_t /*nowMs*/) {
+bool GpsReceiver::poll(GpsReading& out, uint32_t nowMs) {
+    if (!gstRequested_ || nowMs - lastGstRequestMs_ >= config::kGstRequestIntervalMs) {
+        requestErrorEstimates();
+        gstRequested_ = true;
+        lastGstRequestMs_ = nowMs;
+    }
+
     if (!parser_.available(serial_)) {
         return false;
     }
-
-    requestErrorEstimates();
 
     const gps_fix fix = parser_.read();
     out.fix = fix;

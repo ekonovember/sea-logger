@@ -30,8 +30,7 @@ bool TrackLogger::flush() {
             const bool isNew = !SD.exists(fileName);
             file = SD.open(fileName, FILE_WRITE);
             if (!file) {
-                buffer_.clear();
-                return false;
+                return false;  // keep the buffer, try again next time
             }
             if (isNew) {
                 file.print(tracker::kCsvHeader);

@@ -15,7 +15,8 @@ struct DegreesMinutes {
     char hemisphere;      // 'N' / 'S' for latitude, 'E' / 'W' for longitude
 };
 
-// Converts signed decimal degrees to degrees and hundredths of a minute.
+// Converts signed decimal degrees, rounding to the nearest 0.01' and carrying
+// into minutes and degrees (18° 59.999' becomes 19° 00.00').
 DegreesMinutes toDegreesMinutes(double decimalDegrees, bool isLatitude);
 
 // " 50  15.23' N" — 13 characters, fixed width so the screen layout never shifts.

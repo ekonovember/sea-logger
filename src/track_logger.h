@@ -16,7 +16,8 @@ public:
     // Returns false if the buffer was full and the oldest point was dropped.
     bool add(const tracker::TrackPoint& point);
 
-    // Appends everything buffered to the day's file and empties the buffer.
+    // Appends everything buffered to the day's file. On failure the points stay
+    // buffered and are retried on the next flush.
     bool flush();
 
     size_t pending() const { return buffer_.size(); }
